@@ -1,9 +1,11 @@
 import asyncio
 import logging
 from pathlib import Path
+from urllib.parse import urljoin
 
 import aiohttp
 from aiolimiter import AsyncLimiter
+from bs4 import BeautifulSoup
 
 from . import models
 
@@ -38,8 +40,15 @@ class Client:
 
             async with self.limiter, self.session.get(url, headers=self.headers) as resp:
                 resp.raise_for_status()
-                content = await resp.read()
-            _ = dest.write_bytes(content)
+                html = await resp.text()
+
+            # Rewrite relative image URLs to absolute
+            base_url = url.rsplit("/", 1)[0] + "/"
+            soup = BeautifulSoup(html, "html.parser")
+            for img in soup.find_all("img"):
+                img["src"] = urljoin(base_url, img["src"])  # pyright: ignore[reportArgumentType]
+
+            _ = dest.write_text(str(soup), encoding="utf-8")
             return models.Filing(cik=cik, url=url, path=dest)
 
     async def _get_latest_10k_url(self, cik: models.CIK) -> str | None:
