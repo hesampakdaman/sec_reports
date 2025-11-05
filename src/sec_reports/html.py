@@ -7,17 +7,17 @@ from aiolimiter import AsyncLimiter
 
 from . import models
 
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 BASE_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 
 
 class Client:
-    def __init__(self, session: aiohttp.ClientSession, *, agent: str, concurrency: int = 4):
+    def __init__(self, logger: logging.Logger, session: aiohttp.ClientSession, *, agent: str, concurrency: int = 4):
         self.session: aiohttp.ClientSession = session
         self.limiter: AsyncLimiter = AsyncLimiter(max_rate=10, time_period=1)
         self.semaphore: asyncio.Semaphore = asyncio.Semaphore(concurrency)
         self.headers: dict[str, str] = {"User-Agent": agent}
+        self.logger: logging.Logger = logger
 
     async def download_latest_10k_filing(
         self, cik: models.CIK, dest_dir: Path
@@ -41,7 +41,7 @@ class Client:
             url = BASE_URL.format(cik=str(cik))
             async with self.session.get(url, headers=self.headers) as resp:
                 if resp.status != 200:
-                    log.warning("Skipping CIK %s: HTTP %s", cik, resp.status)
+                    self.logger.warning("Skipping CIK %s: HTTP %s", cik, resp.status)
                     return None
                 resp.raise_for_status()
                 data = await resp.json()  # pyright: ignore[reportAny]
@@ -52,5 +52,5 @@ class Client:
                 accession: str = filings["accessionNumber"][i].replace("-", "")  # pyright: ignore[reportAny]
                 primary: str = filings["primaryDocument"][i]  # pyright: ignore[reportAny]
                 return f"https://www.sec.gov/Archives/edgar/data/{str(cik)}/{accession}/{primary}"
-        log.info("10-K not found for: %s", str(cik))
+        self.logger.warning("10-K not found for: %s", str(cik))
         return None
