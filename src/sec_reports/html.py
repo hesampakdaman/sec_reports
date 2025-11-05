@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import aiohttp
+from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
 
@@ -19,9 +20,17 @@ class Client:
         session: aiohttp.ClientSession,
         *,
         agent: str,
-        concurrency: int = 4,
+        concurrency: int = 12,
     ):
-        self.session: aiohttp.ClientSession = session
+        self.session: RetryClient = RetryClient(
+            session,
+            retry_options=ExponentialRetry(
+                attempts=5,
+                start_timeout=1,
+                max_timeout=60,
+                statuses={500},
+            ),
+        )
         self.limiter: AsyncLimiter = AsyncLimiter(max_rate=10, time_period=1)
         self.semaphore: asyncio.Semaphore = asyncio.Semaphore(concurrency)
         self.headers: dict[str, str] = {"User-Agent": agent}
@@ -39,7 +48,11 @@ class Client:
             dest = dest_dir / filename
 
             async with self.limiter, self.session.get(url, headers=self.headers) as resp:
-                resp.raise_for_status()
+                if resp.status != 200:
+                    self.logger.warning(
+                        "unexpected status code (%d) for cik %s", resp.status, str(cik)
+                    )
+                    return None
                 html = await resp.text()
 
             # Rewrite relative image URLs to absolute
