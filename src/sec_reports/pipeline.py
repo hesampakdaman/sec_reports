@@ -12,7 +12,6 @@ class Sec10KConfig:
     client: ports.ClientProtocol
     pdf_workers: int
     converter: ports.Converter
-    verbose: bool
 
     def __post_init__(self):
         if self.pdf_workers <= 0:
@@ -24,7 +23,7 @@ class Sec10K:
         self.pdf_workers: int = cfg.pdf_workers
         self.converter: ports.Converter = cfg.converter
         self.client: ports.ClientProtocol = cfg.client
-        self.verbose: bool = cfg.verbose
+
         self.logger: logging.Logger = logger
 
         self.queue: asyncio.Queue[models.Filing | None] = asyncio.Queue()
@@ -49,8 +48,7 @@ class Sec10K:
 
     async def _fetch(self, cik: models.CIK, destination: Path):
         if filing := await self.client.download_latest_10k_filing(cik, destination):
-            if self.verbose:
-                self.logger.debug("Fetched 10-K filing for %s", str(cik))
+            self.logger.debug("Fetched 10-K filing for %s", str(cik))
             await self.queue.put(filing)
 
     async def _convert(self):
@@ -60,9 +58,7 @@ class Sec10K:
             if filing is None:
                 self.queue.task_done()
                 return
-            if self.verbose:
-                self.logger.debug("Creating PDF for %s...", str(filing.cik))
+            self.logger.debug("Creating PDF for %s...", str(filing.cik))
             await loop.run_in_executor(self.pool, self.converter, filing)
-            if self.verbose:
-                self.logger.debug("Finished creating PDF for %s.", str(filing.cik))
+            self.logger.debug("Finished creating PDF for %s.", str(filing.cik))
             self.queue.task_done()

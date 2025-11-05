@@ -65,10 +65,9 @@ async def run(logger: logging.Logger, args: Args):
     args.outdir.mkdir(parents=True, exist_ok=True)
     async with aiohttp.ClientSession() as session:
         cfg = pipeline.Sec10KConfig(
-            client=html.Client(session, agent=args.agent),
+            client=html.Client(logger, session, agent=args.agent),
             pdf_workers=args.workers,
             converter=converter.with_pdfkit,
-            verbose=args.verbose,
         )
         runner = pipeline.Sec10K(logger, cfg)
         await runner.run(ciks, args.outdir)
