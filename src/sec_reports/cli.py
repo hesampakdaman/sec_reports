@@ -29,7 +29,7 @@ def parse_args() -> Args:
     _ = p.add_argument(
         "--workers",
         type=int,
-        default=8,
+        default=3,
         help="Number of cpu workers dedicated to converting html to pdf.",
     )
     _ = p.add_argument(
