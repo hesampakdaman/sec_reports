@@ -34,7 +34,6 @@ async def test_sec10k_pipeline(tmp_path: Path):
         client=fake_client,
         pdf_workers=2,
         converter=fake_converter,
-        verbose=False,
     )
     cik = models.CIK("0000000001")
     runner = pipeline.Sec10K(logger, cfg)

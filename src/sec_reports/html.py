@@ -7,12 +7,18 @@ from aiolimiter import AsyncLimiter
 
 from . import models
 
-
 BASE_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 
 
 class Client:
-    def __init__(self, logger: logging.Logger, session: aiohttp.ClientSession, *, agent: str, concurrency: int = 4):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        session: aiohttp.ClientSession,
+        *,
+        agent: str,
+        concurrency: int = 4,
+    ):
         self.session: aiohttp.ClientSession = session
         self.limiter: AsyncLimiter = AsyncLimiter(max_rate=10, time_period=1)
         self.semaphore: asyncio.Semaphore = asyncio.Semaphore(concurrency)
