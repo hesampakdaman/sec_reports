@@ -28,7 +28,7 @@ class Client:
                 attempts=5,
                 start_timeout=1,
                 max_timeout=60,
-                statuses={500},
+                statuses={429},
             ),
         )
         self.limiter: AsyncLimiter = AsyncLimiter(max_rate=10, time_period=1)
