@@ -38,10 +38,11 @@ class Sec10K:
 
         async with asyncio.TaskGroup() as tg:
             producers = [tg.create_task(self._fetch(cik, destination)) for cik in ciks]
-            _consumer = tg.create_task(self._convert())
+            consumers = [tg.create_task(self._convert()) for _ in range(self.pdf_workers)]
 
             _ = await asyncio.gather(*producers)
-            await self.queue.put(None)
+            for _ in range(len(consumers)):
+                _ = await self.queue.put(None)
 
     async def _fetch(self, cik: models.CIK, destination: Path):
         if filing := await self.client.download_latest_10k_filing(cik, destination):
