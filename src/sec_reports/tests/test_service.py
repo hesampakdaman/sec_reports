@@ -1,5 +1,5 @@
-from pathlib import Path
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -38,7 +38,6 @@ async def test_sec10k_pipeline(tmp_path: Path):
     )
     cik = models.CIK("0000000001")
     runner = pipeline.Sec10K(logger, cfg)
-
 
     # When
     await runner.run([cik], tmp_path)

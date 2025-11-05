@@ -12,7 +12,6 @@ def with_pdfkit(filing: models.Filing) -> None:
         str(pdf_path),
         options={
             "enable-local-file-access": None,
-            "disable-external-links": None,
         },
     )
     os.remove(filing.path)
