@@ -38,12 +38,11 @@ class Sec10K:
 
         async with asyncio.TaskGroup() as tg:
             producers = [tg.create_task(self._fetch(cik, destination)) for cik in ciks]
+            consumers = [tg.create_task(self._convert()) for _ in range(self.pdf_workers)]
 
-            for _ in range(self.pdf_workers):
-                _ = tg.create_task(self._convert())
             _ = await asyncio.gather(*producers)
 
-            for _ in range(self.pdf_workers):
+            for _ in range(len(consumers)):
                 await self.queue.put(None)
 
     async def _fetch(self, cik: models.CIK, destination: Path):
@@ -59,6 +58,8 @@ class Sec10K:
                 self.queue.task_done()
                 return
             self.logger.debug("Creating PDF for %s...", str(filing.cik))
+
             await loop.run_in_executor(self.pool, self.converter, filing)
+
             self.logger.debug("Finished creating PDF for %s.", str(filing.cik))
             self.queue.task_done()
