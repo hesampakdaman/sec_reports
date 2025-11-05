@@ -27,7 +27,7 @@ class Sec10K:
         self.logger: logging.Logger = logger
 
         self.queue: asyncio.Queue[models.Filing | None] = asyncio.Queue()
-        self.pool: ProcessPoolExecutor = ProcessPoolExecutor()
+        self.pool: ProcessPoolExecutor = ProcessPoolExecutor(max_workers=cfg.pdf_workers)
 
     def close(self):
         self.pool.shutdown(wait=True)
@@ -38,12 +38,10 @@ class Sec10K:
 
         async with asyncio.TaskGroup() as tg:
             producers = [tg.create_task(self._fetch(cik, destination)) for cik in ciks]
-            consumers = [tg.create_task(self._convert()) for _ in range(self.pdf_workers)]
+            _consumer = tg.create_task(self._convert())
 
             _ = await asyncio.gather(*producers)
-
-            for _ in range(len(consumers)):
-                await self.queue.put(None)
+            await self.queue.put(None)
 
     async def _fetch(self, cik: models.CIK, destination: Path):
         if filing := await self.client.download_latest_10k_filing(cik, destination):
