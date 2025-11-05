@@ -8,9 +8,6 @@ import aiohttp
 
 from sec_reports import converter, html, models, pipeline
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-log = logging.getLogger(__name__)
-
 
 @dataclass
 class Args:
@@ -63,7 +60,7 @@ def parse_args() -> Args:
     return Args(ns.outdir, ns.workers, ns.ciks, ns.agent, ns.verbose)  # pyright: ignore[reportAny]
 
 
-async def run(args: Args):
+async def run(logger: logging.Logger, args: Args):
     ciks = [models.CIK(c) for c in args.ciks]
     args.outdir.mkdir(parents=True, exist_ok=True)
     async with aiohttp.ClientSession() as session:
@@ -73,15 +70,19 @@ async def run(args: Args):
             converter=converter.with_pdfkit,
             verbose=args.verbose,
         )
-        runner = pipeline.Sec10K(cfg)
+        runner = pipeline.Sec10K(logger, cfg)
         await runner.run(ciks, args.outdir)
         runner.close()
 
 
 def main():
     args = parse_args()
-    if args.verbose:
-        log.info(f"Starting to fetch {len(args.ciks)} reports...")
-    asyncio.run(run(args))
-    if args.verbose:
-        log.info("Done! Reports saved in %s.", args.outdir.absolute())
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(level=log_level, format="%(message)s")
+    log = logging.getLogger(__name__)
+
+    log.info(f"Starting to fetch {len(args.ciks)} reports...")
+
+    asyncio.run(run(log, args))
+
+    log.info("Done! Reports saved in %s.", args.outdir.absolute())

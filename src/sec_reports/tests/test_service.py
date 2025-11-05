@@ -1,10 +1,14 @@
 from pathlib import Path
+import logging
 
 import pytest
 
 from sec_reports import models, pipeline
 
 pytestmark = pytest.mark.asyncio
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class FakeClient:
@@ -30,9 +34,11 @@ async def test_sec10k_pipeline(tmp_path: Path):
         client=fake_client,
         pdf_workers=2,
         converter=fake_converter,
+        verbose=False,
     )
     cik = models.CIK("0000000001")
-    runner = pipeline.Sec10K(cfg)
+    runner = pipeline.Sec10K(logger, cfg)
+
 
     # When
     await runner.run([cik], tmp_path)
