@@ -1,4 +1,4 @@
-.PHONY: install lock build test lint fmt fmt-check clean
+.PHONY: install lock build test lint clean
 
 install:
 	uv sync --dev
